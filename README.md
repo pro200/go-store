@@ -8,8 +8,6 @@
 - 암호화: 내부 `lib.Encrypt / lib.Decrypt`
 - 멀티 고루틴 안전 (RWMutex 사용)
 
----
-
 ## Features
 
 - 파일 기반 영속 저장소
@@ -18,8 +16,6 @@
 - msgpack 직렬화
 - 암호화 저장
 - Thread-safe
-
----
 
 ## Installation
 
@@ -89,7 +85,7 @@ func New(cfg ...Config) (*Store, error)
 ```
 새로운 Store 인스턴스를 생성합니다.
 DB 파일이 없으면 자동 생성되며, Bucket도 자동 생성됩니다.
----
+
 
 ### Bucket
 ```go
@@ -97,7 +93,7 @@ func (s *Store) Bucket(name ...string) string
 ```
 - 인자 없음 → 현재 Bucket 이름 반환
 - 인자 있음 → Bucket이 없으면 생성 후 기본 Bucket으로 설정
----
+
 
 ### DeleteBucket
 ```go
@@ -105,7 +101,6 @@ func (s *Store) DeleteBucket(name string) error
 ```
 지정된 Bucket을 삭제합니다.
 
----
 
 ### Set
 ```go
@@ -117,7 +112,7 @@ func (s *Store) Set(key string, value any) error
 ```go
 db.Set("age", 30)
 ```
----
+
 
 ### Get
 ```go
@@ -130,7 +125,7 @@ func (s *Store) Get(key string, dest any) error
 var age int
 err := db.Get("age", &age)
 ```
----
+
 
 ### Keys
 ```go
@@ -140,7 +135,7 @@ func (s *Store) Keys() ([]string, error)
 ```go
 keys, _ := db.Keys()
 ```
----
+
 
 ### Delete
 ```go
@@ -149,7 +144,6 @@ func (s *Store) Delete(key string) error
 지정된 키 삭제
 존재하지 않아도 에러 없음
 
----
 
 ### Close
 ```go
