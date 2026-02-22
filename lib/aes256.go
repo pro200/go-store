@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"encoding/base64"
-	"fmt"
+	"errors"
 )
 
 var (
@@ -13,77 +12,87 @@ var (
 	encryptIv     = encryptKey[3:19]
 )
 
-// AesEncrypt encrypts given text in AES 256 CBC
+// PKCS7 Padding
+func pkcs7Pad(data []byte, blockSize int) []byte {
+	padding := blockSize - len(data)%blockSize
+	padText := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(data, padText...)
+}
+
+// PKCS7 Unpadding
+func pkcs7Unpad(data []byte, blockSize int) ([]byte, error) {
+	if len(data) == 0 || len(data)%blockSize != 0 {
+		return nil, errors.New("invalid padding size")
+	}
+
+	padding := int(data[len(data)-1])
+	if padding == 0 || padding > blockSize {
+		return nil, errors.New("invalid padding")
+	}
+
+	return data[:len(data)-padding], nil
+}
+
+// AES-CBC Encrypt
+func AesEncrypt(key, iv, data []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(iv) != aes.BlockSize {
+		return nil, errors.New("invalid IV size")
+	}
+
+	data = pkcs7Pad(data, aes.BlockSize)
+
+	encrypted := make([]byte, len(data))
+
+	mode := cipher.NewCBCEncrypter(block, iv)
+	mode.CryptBlocks(encrypted, data)
+
+	return encrypted, nil
+}
+
+// AES-CBC Decrypt
+func AesDecrypt(key, iv, encryted []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(iv) != aes.BlockSize {
+		return nil, errors.New("invalid IV size")
+	}
+
+	if len(encryted)%aes.BlockSize != 0 {
+		return nil, errors.New("encryted is not a multiple of block size")
+	}
+
+	data := make([]byte, len(encryted))
+
+	mode := cipher.NewCBCDecrypter(block, iv)
+	mode.CryptBlocks(data, encryted)
+
+	return pkcs7Unpad(data, aes.BlockSize)
+}
+
+func Encrypt(data []byte) ([]byte, error) {
+	return AesEncrypt([]byte(encryptKey), []byte(encryptIv), data)
+}
+
+func Decrypt(encrypted []byte) ([]byte, error) {
+	return AesDecrypt([]byte(encryptKey), []byte(encryptIv), encrypted)
+}
+
+//func main() {
+//	key := []byte("1234567890123456") // 16, 24, 32 bytes
+//	iv := []byte("abcdefghijklmnop")  // 16 bytes
 //
-//	key := "ovmktblgkdcsvtibhqcwmegxpjtmqlwh" 23byte
-//	iv := "kh5b2kldgfo3ng4k"
-//	text := "Hello, World!"
-//	encrypted, _ := AesEncrypt(key, iv, text)
-//	fmt.Println(encrypted) -> Wn1j1g5CIzxOetrdehyrLQ==
-func AesEncrypt(key, iv, plaintext string) (string, error) {
-	var plainTextBlock []byte
-	length := len(plaintext)
-
-	if length%16 != 0 {
-		extendBlock := 16 - (length % 16)
-		plainTextBlock = make([]byte, length+extendBlock)
-		copy(plainTextBlock[length:], bytes.Repeat([]byte{uint8(extendBlock)}, extendBlock))
-	} else {
-		plainTextBlock = make([]byte, length)
-	}
-
-	copy(plainTextBlock, plaintext)
-
-	block, err := aes.NewCipher([]byte(key))
-	if err != nil {
-		return "", err
-	}
-
-	ciphertext := make([]byte, len(plainTextBlock))
-	mode := cipher.NewCBCEncrypter(block, []byte(iv))
-	mode.CryptBlocks(ciphertext, plainTextBlock)
-	str := base64.StdEncoding.EncodeToString(ciphertext)
-
-	return str, nil
-}
-
-func Encrypt(plaintext string) (string, error) {
-	return AesEncrypt(encryptKey, encryptIv, plaintext)
-}
-
-// AesDecrypt decrypts given text in AES 256 CBC
+//	data := []byte("hello world")
 //
-//	key := "ovmktblgkdcsvtibhqcwmegxpjtmqlwh" 32byte
-//	iv := "kh5b2kldgfo3ng4k"
-//	encrypted := "Wn1j1g5CIzxOetrdehyrLQ=="
-//	decrypted, _ := AesDecrypt(key, iv, encrypted)
-//	fmt.Println(decrypted) -> Hello, World!
-func AesDecrypt(key, iv, encrypted string) (string, error) {
-	ciphertext, err := base64.StdEncoding.DecodeString(encrypted)
-	if err != nil {
-		return "", err
-	}
-
-	block, err := aes.NewCipher([]byte(key))
-	if err != nil {
-		return "", err
-	}
-
-	if len(ciphertext)%aes.BlockSize != 0 {
-		return "", fmt.Errorf("block size cant be zero")
-	}
-
-	mode := cipher.NewCBCDecrypter(block, []byte(iv))
-	mode.CryptBlocks(ciphertext, ciphertext)
-
-	// PKCS5UnPadding pads a certain blob of data with necessary data to be used in AES block cipher
-	length := len(ciphertext)
-	unpadding := int(ciphertext[length-1])
-	ciphertext = ciphertext[:(length - unpadding)]
-
-	return string(ciphertext), nil
-}
-
-func Decrypt(encrypted string) (string, error) {
-	return AesDecrypt(encryptKey, encryptIv, encrypted)
-}
+//	enc, _ := AesEncrypt(key, iv, data)
+//	dec, _ := AesDecrypt(key, iv, enc)
+//
+//	fmt.Println(string(dec)) // hello world
+//}
