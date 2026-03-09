@@ -8,6 +8,7 @@ require (
 )
 
 require (
+	github.com/pro200/go-aes256 v1.0.0 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
 )
