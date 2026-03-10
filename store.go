@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/pro200/go-store/lib"
 	"github.com/vmihailenco/msgpack/v5"
@@ -35,21 +36,34 @@ func New(path ...string) (*Store, error) {
 	}
 
 	var (
-		err    error
-		db     *bbolt.DB
-		loaded bool
+		db        *bbolt.DB
+		loaded    bool
+		errorList []error
 	)
 
+	// Timeout을 설정하면 해당 시간 내에 lock을 획득하지 못할 경우
+	// "timeout" 에러를 반환하고 즉시 종료됩니다.
+	opts := &bbolt.Options{
+		Timeout: 1 * time.Nanosecond,
+	}
+
 	for _, p := range path {
-		db, err = bbolt.Open(p, 0600, nil)
+		var err error
+		db, err = bbolt.Open(p, 0600, opts)
 		if err == nil {
 			loaded = true
 			break
 		}
+
+		if err.Error() == "timeout" {
+			err = errors.New(p + " is already opened by another app")
+		}
+
+		errorList = append(errorList, err)
 	}
 
 	if !loaded {
-		return nil, err
+		return nil, errorList[0]
 	}
 
 	s := &Store{
@@ -57,7 +71,7 @@ func New(path ...string) (*Store, error) {
 	}
 
 	// 내부 고정 루트 버킷 생성
-	err = db.Update(func(tx *bbolt.Tx) error {
+	err := db.Update(func(tx *bbolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists(rootBucket)
 		return err
 	})
