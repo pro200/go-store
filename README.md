@@ -36,6 +36,7 @@ type User struct {
 }
 
 func main() {
+	// 컴파인된 경우 .<filename>.store 경로 자동 추가
 	db, err := store.New("/tmp/test.store")
 	if err != nil {
 		log.Fatal(err)

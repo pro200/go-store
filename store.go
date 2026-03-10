@@ -2,6 +2,10 @@ package store
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/pro200/go-store/lib"
 	"github.com/vmihailenco/msgpack/v5"
@@ -19,9 +23,32 @@ type Store struct {
 	db *bbolt.DB
 }
 
-func New(path string) (*Store, error) {
-	db, err := bbolt.Open(path, 0600, nil)
-	if err != nil {
+func New(path ...string) (*Store, error) {
+	// .<filename>.store 경로 추가
+	fullpath, _ := os.Executable()
+	if !strings.Contains(fullpath, "go-build") && !strings.Contains(fullpath, "go_build") {
+		path = append(path, filepath.Join(filepath.Dir(fullpath), "."+filepath.Base(fullpath)+".store"))
+	}
+
+	if len(path) == 0 {
+		return nil, fmt.Errorf("no path")
+	}
+
+	var (
+		err    error
+		db     *bbolt.DB
+		loaded bool
+	)
+
+	for _, p := range path {
+		db, err = bbolt.Open(p, 0600, nil)
+		if err == nil {
+			loaded = true
+			break
+		}
+	}
+
+	if !loaded {
 		return nil, err
 	}
 
