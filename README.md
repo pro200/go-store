@@ -13,6 +13,7 @@
 - 임의 타입 저장 가능 (`any`)
 - msgpack 직렬화
 - 암호화 저장
+- path: ~/ 홈경로 반영, <name> 앱이름으로 치환
 
 ## Installation
 
@@ -36,7 +37,7 @@ type User struct {
 }
 
 func main() {
-	// 컴파인된 경우 .<filename>.store 경로 자동 추가
+	// ~/<name>.store -> /home/user/appname.store
 	db, err := store.New("/tmp/test.store")
 	if err != nil {
 		log.Fatal(err)

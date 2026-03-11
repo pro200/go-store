@@ -19,6 +19,7 @@ type User struct {
 }
 
 func main() {
+	// ~/<name>.store -> /home/user/appname.store
 	db, err := store.New("/tmp/test.store")
 	if err != nil {
 		log.Fatal(err)

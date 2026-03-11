@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mitchellh/go-homedir"
 	"github.com/pro200/go-store/lib"
 	"github.com/vmihailenco/msgpack/v5"
 	"go.etcd.io/bbolt"
@@ -24,63 +25,107 @@ type Store struct {
 	db *bbolt.DB
 }
 
-func New(path ...string) (*Store, error) {
-	// .<filename>.store 경로 추가
+func New(path string) (*Store, error) {
+	defaultName := "main"
 	fullpath, _ := os.Executable()
 	if !strings.Contains(fullpath, "go-build") && !strings.Contains(fullpath, "go_build") {
-		path = append(path, filepath.Join(filepath.Dir(fullpath), "."+filepath.Base(fullpath)+".store"))
+		defaultName = filepath.Base(fullpath)
 	}
 
-	if len(path) == 0 {
-		return nil, fmt.Errorf("no path")
+	// ~/ 홈경로 반영 후 절대경로
+	path, err := homedir.Expand(path)
+	if err != nil {
+		return nil, err
 	}
+	path, _ = filepath.Abs(path)
 
-	var (
-		db        *bbolt.DB
-		loaded    bool
-		errorList []error
-	)
+	// <name> 을 앱이름으로 치환
+	path = strings.ReplaceAll(path, "<name>", defaultName)
 
-	// Timeout을 설정하면 해당 시간 내에 lock을 획득하지 못할 경우
-	// "timeout" 에러를 반환하고 즉시 종료됩니다.
+	fmt.Println("path->", path)
+	// Timeout을 설정하면 해당 시간 내에 lock을 획득하지 못할 경우 "timeout" 에러를 반환하고 즉시 종료됩니다.
 	opts := &bbolt.Options{
 		Timeout: 1 * time.Nanosecond,
 	}
 
-	for _, p := range path {
-		var err error
-		db, err = bbolt.Open(p, 0600, opts)
-		if err == nil {
-			loaded = true
-			break
-		}
-
-		if err.Error() == "timeout" {
-			err = errors.New(p + " is already opened by another app")
-		}
-
-		errorList = append(errorList, err)
-	}
-
-	if !loaded {
-		return nil, errorList[0]
-	}
-
-	s := &Store{
-		db: db,
+	db, err := bbolt.Open(path, 0600, opts)
+	if err != nil {
+		return nil, err
 	}
 
 	// 내부 고정 루트 버킷 생성
-	err := db.Update(func(tx *bbolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists(rootBucket)
-		return err
+	err = db.Update(func(tx *bbolt.Tx) error {
+		_, err2 := tx.CreateBucketIfNotExists(rootBucket)
+		return err2
 	})
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
 
-	return s, nil
+	return &Store{db: db}, nil
+
+	//if err.Error() == "timeout" {
+	//	err = errors.New(p + " is already opened by another app")
+	//}
+	//
+	//
+	//// .<filename>.store 경로 추가
+	//fullpath, _ := os.Executable()
+	//if !strings.Contains(fullpath, "go-build") && !strings.Contains(fullpath, "go_build") {
+	//	path = append(path, filepath.Join(filepath.Dir(fullpath), "."+filepath.Base(fullpath)+".store"))
+	//}
+	//
+	//if len(path) == 0 {
+	//	return nil, fmt.Errorf("no path")
+	//}
+	//
+	//var (
+	//	db        *bbolt.DB
+	//	loaded    bool
+	//	errorList []error
+	//)
+	//
+	//// Timeout을 설정하면 해당 시간 내에 lock을 획득하지 못할 경우
+	//// "timeout" 에러를 반환하고 즉시 종료됩니다.
+	//opts := &bbolt.Options{
+	//	Timeout: 1 * time.Nanosecond,
+	//}
+	//
+	//for _, p := range path {
+	//	var err error
+	//	db, err = bbolt.Open(p, 0600, opts)
+	//	if err == nil {
+	//		loaded = true
+	//		break
+	//	}
+	//
+	//	if err.Error() == "timeout" {
+	//		err = errors.New(p + " is already opened by another app")
+	//	}
+	//
+	//	errorList = append(errorList, err)
+	//}
+	//
+	//if !loaded {
+	//	return nil, errorList[0]
+	//}
+	//
+	//s := &Store{
+	//	db: db,
+	//}
+	//
+	//// 내부 고정 루트 버킷 생성
+	//err := db.Update(func(tx *bbolt.Tx) error {
+	//	_, err := tx.CreateBucketIfNotExists(rootBucket)
+	//	return err
+	//})
+	//if err != nil {
+	//	_ = db.Close()
+	//	return nil, err
+	//}
+	//
+	//return s, nil
 }
 
 func (s *Store) Close() error {
