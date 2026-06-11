@@ -1,3 +1,11 @@
+// Package store is a lightweight, file-based key-value store built on
+// bbolt. Values are serialized with msgpack and encrypted with
+// AES-256-CBC using a key derived from a machine identifier, so data
+// written on one machine cannot be read on another.
+//
+// The path passed to New supports two conveniences: a leading ~ is
+// expanded to the user's home directory, and the <name> placeholder is
+// replaced with the executable name (or "main" under go run / go test).
 package store
 
 import (
@@ -5,74 +13,76 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
 
-	"github.com/mitchellh/go-homedir"
-	"github.com/pro200/go-store/lib"
+	"github.com/pro200/go-store/internal/machineid"
 	"github.com/vmihailenco/msgpack/v5"
 	"go.etcd.io/bbolt"
 )
 
 var (
+	// ErrKeyNotFound is returned by Get when the key does not exist.
 	ErrKeyNotFound = errors.New("key not found")
-	ErrEmptyKey    = errors.New("empty key")
+	// ErrEmptyKey is returned when an empty key is passed to Set, Get or Delete.
+	ErrEmptyKey = errors.New("empty key")
 )
 
 var rootBucket = []byte("__root__")
 
+// Store is an encrypted key-value store backed by a single bbolt file.
+// It is safe for concurrent use by multiple goroutines.
 type Store struct {
-	db *bbolt.DB
+	db  *bbolt.DB
+	key []byte
 }
 
-func New(path string) (*Store, error) {
-	defaultName := "main"
-	fullpath, _ := os.Executable()
-	if !strings.Contains(fullpath, "go-build") && !strings.Contains(fullpath, "go_build") {
-		defaultName = filepath.Base(fullpath)
+// New opens (or creates) the store file at path. Parent directories
+// are created as needed. It fails if the file lock cannot be acquired
+// within the configured timeout (default 1s, see WithTimeout) or if no
+// machine identifier is available for key derivation.
+func New(path string, opts ...Option) (*Store, error) {
+	cfg := config{timeout: defaultTimeout}
+	for _, opt := range opts {
+		opt(&cfg)
 	}
 
-	// ~/ 홈경로 반영 후 절대경로
-	path, err := homedir.Expand(path)
-	if err != nil {
-		return nil, err
-	}
-	path, _ = filepath.Abs(path)
-
-	// <name> 을 앱이름으로 치환
-	path = strings.ReplaceAll(path, "<name>", defaultName)
-
-	fmt.Println("path->", path)
-	// Timeout을 설정하면 해당 시간 내에 lock을 획득하지 못할 경우 "timeout" 에러를 반환하고 즉시 종료됩니다.
-	opts := &bbolt.Options{
-		Timeout: 1 * time.Nanosecond,
-	}
-
-	db, err := bbolt.Open(path, 0600, opts)
+	execPath, _ := os.Executable()
+	path, err := resolvePath(path, execPath)
 	if err != nil {
 		return nil, err
 	}
 
-	// 내부 고정 루트 버킷 생성
+	machineID, err := machineid.ID()
+	if err != nil {
+		return nil, fmt.Errorf("store: derive encryption key: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return nil, fmt.Errorf("store: create directory: %w", err)
+	}
+
+	db, err := bbolt.Open(path, 0o600, &bbolt.Options{Timeout: cfg.timeout})
+	if err != nil {
+		return nil, fmt.Errorf("store: open %s: %w", path, err)
+	}
+
 	err = db.Update(func(tx *bbolt.Tx) error {
-		_, err2 := tx.CreateBucketIfNotExists(rootBucket)
-		return err2
+		_, err := tx.CreateBucketIfNotExists(rootBucket)
+		return err
 	})
 	if err != nil {
 		_ = db.Close()
-		return nil, err
+		return nil, fmt.Errorf("store: create root bucket: %w", err)
 	}
 
-	return &Store{db: db}, nil
+	return &Store{db: db, key: deriveKey(machineID)}, nil
 }
 
+// Close releases the database file and its lock.
 func (s *Store) Close() error {
 	return s.db.Close()
 }
 
-/*
- * KV 기능 (dest any 방식)
- */
+// Set serializes value with msgpack, encrypts it and stores it under key.
 func (s *Store) Set(key string, value any) error {
 	if key == "" {
 		return ErrEmptyKey
@@ -80,60 +90,62 @@ func (s *Store) Set(key string, value any) error {
 
 	data, err := msgpack.Marshal(value)
 	if err != nil {
-		return err
+		return fmt.Errorf("store: encode value for key %q: %w", key, err)
 	}
 
-	data, err = lib.Encrypt(data)
+	data, err = encrypt(s.key, data)
 	if err != nil {
-		return err
+		return fmt.Errorf("store: encrypt value for key %q: %w", key, err)
 	}
 
 	return s.db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket(rootBucket)
-		return b.Put([]byte(key), data)
+		return tx.Bucket(rootBucket).Put([]byte(key), data)
 	})
 }
 
+// Get decrypts the value stored under key and unmarshals it into dest,
+// which must be a pointer. It returns ErrKeyNotFound if the key does
+// not exist.
 func (s *Store) Get(key string, dest any) error {
 	if key == "" {
 		return ErrEmptyKey
 	}
 
 	return s.db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket(rootBucket)
-		data := b.Get([]byte(key))
+		data := tx.Bucket(rootBucket).Get([]byte(key))
 		if data == nil {
 			return ErrKeyNotFound
 		}
 
-		var err error
-		data, err = lib.Decrypt(data)
+		data, err := decrypt(s.key, data)
 		if err != nil {
-			return err
+			return fmt.Errorf("store: decrypt value for key %q: %w", key, err)
 		}
 
-		return msgpack.Unmarshal(data, dest)
+		if err := msgpack.Unmarshal(data, dest); err != nil {
+			return fmt.Errorf("store: decode value for key %q: %w", key, err)
+		}
+		return nil
 	})
 }
 
+// Delete removes key from the store. Deleting a missing key is a no-op.
 func (s *Store) Delete(key string) error {
 	if key == "" {
 		return ErrEmptyKey
 	}
 
 	return s.db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket(rootBucket)
-		return b.Delete([]byte(key))
+		return tx.Bucket(rootBucket).Delete([]byte(key))
 	})
 }
 
+// Keys returns all keys in the store in lexicographic order.
 func (s *Store) Keys() ([]string, error) {
 	var keys []string
 
 	err := s.db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket(rootBucket)
-		c := b.Cursor()
-
+		c := tx.Bucket(rootBucket).Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
 			keys = append(keys, string(k))
 		}

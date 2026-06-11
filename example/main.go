@@ -1,16 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/pro200/go-store"
 )
-
-// =========================
-// main
-// =========================
 
 type User struct {
 	Name string
@@ -19,8 +16,8 @@ type User struct {
 }
 
 func main() {
-	// ~/<name>.store -> /home/user/appname.store
-	db, err := store.New("/tmp/test.store")
+	// "~/<name>.store" -> /Users/me/main.store (실행 파일 이름으로 치환)
+	db, err := store.New("/tmp/test.store", store.WithTimeout(3*time.Second))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,20 +35,26 @@ func main() {
 
 	// 조회 (dest 방식)
 	var user User
-	err = db.Get("user:1", &user)
-	if err != nil {
+	if err := db.Get("user:1", &user); err != nil {
 		log.Fatal(err)
 	}
-
 	fmt.Println("User:", user)
 
 	// 키 목록
-	keys, _ := db.Keys()
+	keys, err := db.Keys()
+	if err != nil {
+		log.Fatal(err)
+	}
 	fmt.Println("Keys:", keys)
 
 	// 삭제
-	_ = db.Delete("user:1")
+	if err := db.Delete("user:1"); err != nil {
+		log.Fatal(err)
+	}
 
+	// 삭제 확인
 	err = db.Get("user:1", &user)
-	fmt.Println("After delete:", err)
+	if errors.Is(err, store.ErrKeyNotFound) {
+		fmt.Println("After delete: key not found (expected)")
+	}
 }

@@ -1,0 +1,147 @@
+{
+  "version": "2.0",
+  "lastUpdated": "2026-06-11T04:42:31.573Z",
+  "activeFeatures": [
+    "machineid",
+    "go-store",
+    "example"
+  ],
+  "primaryFeature": "machineid",
+  "features": {
+    "machineid": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-06-11T04:40:34.029Z",
+        "lastUpdated": "2026-06-11T04:40:47.697Z"
+      },
+      "lastFile": "/Users/pro200/Projects/go-store/internal/machineid/machineid_test.go"
+    },
+    "go-store": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-06-11T04:40:58.876Z",
+        "lastUpdated": "2026-06-11T04:42:07.058Z"
+      },
+      "lastFile": "/Users/pro200/Projects/go-store/store_test.go"
+    },
+    "example": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-06-11T04:42:31.573Z",
+        "lastUpdated": "2026-06-11T04:42:31.573Z"
+      },
+      "lastFile": "/Users/pro200/Projects/go-store/example/main.go"
+    }
+  },
+  "pipeline": {
+    "currentPhase": 1,
+    "level": "Dynamic",
+    "phaseHistory": []
+  },
+  "session": {
+    "startedAt": "2026-03-15T16:12:42.159Z",
+    "onboardingCompleted": false,
+    "lastActivity": "2026-06-11T04:42:31.573Z"
+  },
+  "history": [
+    {
+      "timestamp": "2026-06-11T04:40:34.029Z",
+      "feature": "machineid",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-11T04:40:37.843Z",
+      "feature": "machineid",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-11T04:40:40.201Z",
+      "feature": "machineid",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-11T04:40:42.632Z",
+      "feature": "machineid",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-11T04:40:43.450Z",
+      "feature": "machineid",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-11T04:40:47.697Z",
+      "feature": "machineid",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-11T04:40:58.876Z",
+      "feature": "go-store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-11T04:41:03.178Z",
+      "feature": "go-store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-11T04:41:05.093Z",
+      "feature": "go-store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-11T04:41:29.761Z",
+      "feature": "go-store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-11T04:41:45.558Z",
+      "feature": "go-store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-11T04:41:51.429Z",
+      "feature": "go-store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-11T04:42:07.058Z",
+      "feature": "go-store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-11T04:42:31.573Z",
+      "feature": "example",
+      "phase": "do",
+      "action": "updated"
+    }
+  ]
+}

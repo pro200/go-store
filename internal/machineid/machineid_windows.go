@@ -1,0 +1,22 @@
+//go:build windows
+
+package machineid
+
+import (
+	"golang.org/x/sys/windows/registry"
+)
+
+// platformID reads the MachineGuid generated at Windows installation.
+func platformID() (string, error) {
+	key, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Cryptography`, registry.QUERY_VALUE|registry.WOW64_64KEY)
+	if err != nil {
+		return "", err
+	}
+	defer key.Close()
+
+	guid, _, err := key.GetStringValue("MachineGuid")
+	if err != nil {
+		return "", err
+	}
+	return guid, nil
+}

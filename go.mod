@@ -3,13 +3,10 @@ module github.com/pro200/go-store
 go 1.25.1
 
 require (
+	github.com/pro200/go-aes256 v1.0.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	go.etcd.io/bbolt v1.4.3
+	golang.org/x/sys v0.29.0
 )
 
-require (
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/pro200/go-aes256 v1.0.0 // indirect
-	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-)
+require github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
