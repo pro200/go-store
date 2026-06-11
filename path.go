@@ -23,7 +23,7 @@ func resolvePath(path, execPath string) (string, error) {
 		// OS 마다 보안(샌드박스) 체계와 다중 사용자 보호 정책이 다르기 때문에, /tmp 경로는 OS가 제공하는 임시 디렉토리로 대체
 		// macOS 예: /var/folders/7w/2tbd3m4s0hx0qncd_m78p2580000gn/T
 		tmp := os.TempDir()
-		path = filepath.Join(tmp, path[1:])
+		path = filepath.Join(tmp, path[4:])
 	}
 
 	path, err := filepath.Abs(path)
