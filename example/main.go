@@ -16,8 +16,8 @@ type User struct {
 }
 
 func main() {
-	// "~/<name>.store" -> /Users/me/main.store (실행 파일 이름으로 치환)
-	db, err := store.New("/tmp/test.store", store.WithTimeout(3*time.Second))
+	// "/tmp/<name>.store" -> /var/folders/7w/2tbd3m4s.../T/tmp/main.store (실행 파일 이름으로 치환)
+	db, err := store.New("/tmp/<name>.store", store.WithTimeout(3*time.Second))
 	if err != nil {
 		log.Fatal(err)
 	}

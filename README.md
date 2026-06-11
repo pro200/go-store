@@ -17,7 +17,7 @@
   1. OS machine id (macOS: IOPlatformUUID / Linux: /etc/machine-id / Windows: MachineGuid)
   2. 첫 번째 활성 네트워크 인터페이스의 MAC 주소
   3. hostname
-- path 편의 기능: `~/` 홈경로 확장, `<name>` 실행 파일 이름으로 치환
+  - path 편의 기능: `~/` 홈경로 확장, `/tmp` OS 임시 디렉토리 확장, `<name>` 실행 파일 이름으로 치환
 - 파일 락 타임아웃 설정 가능 (`WithTimeout`, 기본 1초)
 
 ## Installation
@@ -41,41 +41,53 @@ import (
 )
 
 type User struct {
-	Name string
-	Age  int
-	At   time.Time
+  Name string
+  Age  int
+  At   time.Time
 }
 
 func main() {
-	// "~/<name>.store" -> /home/user/myapp.store
-	db, err := store.New("/tmp/test.store", store.WithTimeout(3*time.Second))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	// 저장
-	err = db.Set("user:1", User{Name: "Kim", Age: 30, At: time.Now()})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// 조회 (dest 방식)
-	var user User
-	if err := db.Get("user:1", &user); err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("User:", user)
-
-	// 키 목록
-	keys, _ := db.Keys()
-	fmt.Println("Keys:", keys)
-
-	// 삭제
-	_ = db.Delete("user:1")
-
-	err = db.Get("user:1", &user)
-	fmt.Println(errors.Is(err, store.ErrKeyNotFound)) // true
+  // "/tmp/<name>.store" -> /var/folders/7w/2tbd3m4s.../T/tmp/main.store (실행 파일 이름으로 치환)
+  db, err := store.New("/tmp/<name>.store", store.WithTimeout(3*time.Second))
+  if err != nil {
+    log.Fatal(err)
+  }
+  defer db.Close()
+  
+  // 저장
+  err = db.Set("user:1", User{
+    Name: "Kim",
+    Age:  30,
+    At:   time.Now(),
+  })
+  if err != nil {
+    log.Fatal(err)
+  }
+  
+  // 조회 (dest 방식)
+  var user User
+  if err := db.Get("user:1", &user); err != nil {
+    log.Fatal(err)
+  }
+  fmt.Println("User:", user)
+  
+  // 키 목록
+  keys, err := db.Keys()
+  if err != nil {
+    log.Fatal(err)
+  }
+  fmt.Println("Keys:", keys)
+  
+  // 삭제
+  if err := db.Delete("user:1"); err != nil {
+    log.Fatal(err)
+  }
+  
+  // 삭제 확인
+  err = db.Get("user:1", &user)
+  if errors.Is(err, store.ErrKeyNotFound) {
+    fmt.Println("After delete: key not found (expected)")
+  }
 }
 ```
 

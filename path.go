@@ -19,6 +19,13 @@ func resolvePath(path, execPath string) (string, error) {
 		path = filepath.Join(home, path[1:])
 	}
 
+	if path == "/tmp" || strings.HasPrefix(path, "/tmp/") {
+		// OS 마다 보안(샌드박스) 체계와 다중 사용자 보호 정책이 다르기 때문에, /tmp 경로는 OS가 제공하는 임시 디렉토리로 대체
+		// macOS 예: /var/folders/7w/2tbd3m4s0hx0qncd_m78p2580000gn/T
+		tmp := os.TempDir()
+		path = filepath.Join(tmp, path[1:])
+	}
+
 	path, err := filepath.Abs(path)
 	if err != nil {
 		return "", fmt.Errorf("store: resolve path %q: %w", path, err)

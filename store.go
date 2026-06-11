@@ -51,6 +51,8 @@ func New(path string, opts ...Option) (*Store, error) {
 		return nil, err
 	}
 
+	fmt.Println("path: ", path)
+
 	machineID, err := machineid.ID()
 	if err != nil {
 		return nil, fmt.Errorf("store: derive encryption key: %w", err)
